@@ -1,6 +1,5 @@
 import os
 import logging
-import re
 from typing import List, Dict
 from openai import OpenAI
 from app.vector_store import search_similar_chunks
@@ -98,23 +97,8 @@ Use only the information from the context to answer the question. If the context
             max_tokens=1000
         )
         
-        answer = response.choices[0].message.content
-        
-        # Remove any markdown formatting that might still be present
-        # Remove markdown code blocks
-        answer = re.sub(r'```[\s\S]*?```', '', answer)
-        # Remove markdown bold/italic
-        answer = re.sub(r'\*\*([^\*]+)\*\*', r'\1', answer)
-        answer = re.sub(r'\*([^\*]+)\*', r'\1', answer)
-        answer = re.sub(r'__([^_]+)__', r'\1', answer)
-        answer = re.sub(r'_([^_]+)_', r'\1', answer)
-        # Remove markdown headers
-        answer = re.sub(r'^#+\s+', '', answer, flags=re.MULTILINE)
-        # Remove markdown links but keep text
-        answer = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', answer)
-        # Clean up extra whitespace
-        answer = answer.strip()
-        
+        answer = response.choices[0].message.content or ""
+
         return {
             'answer': answer,
             'sources': sources
