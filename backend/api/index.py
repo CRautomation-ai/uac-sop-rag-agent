@@ -10,9 +10,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.models import QueryRequest, QueryResponse, LoadDocumentsResponse, HealthResponse
 from app.database import initialize_database, is_database_empty, get_document_count
-from app.document_processor import scan_and_process_documents
-from app.vector_store import store_embeddings, clear_all_chunks
-from app.rag_chain import get_embedding, query_rag
+from app.rag_chain import query_rag
+# document_processor, store_embeddings, get_embedding: lazy-imported in load_documents_internal
+# so serverless (Vercel) doesn't need PyPDF2/python-docx/tiktoken/langchain at import time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -66,13 +66,15 @@ async def load_documents_async(data_folder: str):
 
 def load_documents_internal(data_folder: str) -> tuple[int, int]:
     """Internal function to load documents. Returns (chunks_processed, files_processed)."""
-    # Scan and process all documents
+    from app.document_processor import scan_and_process_documents
+    from app.rag_chain import get_embedding
+    from app.vector_store import store_embeddings
+
     all_chunks, files_processed = scan_and_process_documents(data_folder)
-    
+
     if not all_chunks:
         return 0, files_processed
-    
-    # Get embeddings for all chunks
+
     logger.info(f"Getting embeddings for {len(all_chunks)} chunks...")
     embeddings = []
     for i, chunk in enumerate(all_chunks):
@@ -80,11 +82,10 @@ def load_documents_internal(data_folder: str) -> tuple[int, int]:
             logger.info(f"Embedding progress: {i + 1}/{len(all_chunks)}")
         embedding = get_embedding(chunk['text'])
         embeddings.append(embedding)
-    
-    # Store in database
+
     logger.info("Storing embeddings in database...")
     store_embeddings(all_chunks, embeddings)
-    
+
     return len(all_chunks), files_processed
 
 

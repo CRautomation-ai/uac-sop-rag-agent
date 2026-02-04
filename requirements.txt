@@ -1,12 +1,7 @@
 # Python deps for Vercel serverless (api/index.py).
-# Must include all imports from backend.api.index (including document_processor).
+# Only query path; document loading is lazy-imported so PyPDF2/python-docx not needed.
 fastapi==0.104.1
 openai>=1.12.0
 psycopg2-binary==2.9.9
 pydantic==2.5.0
 python-multipart==0.0.6
-python-docx==1.1.0
-PyPDF2==3.0.1
-langchain-text-splitters>=0.0.1
-tiktoken==0.5.2
-requests==2.31.0
