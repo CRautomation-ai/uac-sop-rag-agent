@@ -3,7 +3,6 @@ import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-// Backend base URL: /api when using Vite proxy (dev), or set VITE_API_URL for production (e.g. backend URL)
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 interface Message {
@@ -111,7 +110,13 @@ const ChatInterface: React.FC = () => {
         ))}
         {loading && (
           <div className="message assistant">
-            <div className="message-bubble">...</div>
+            <div className="message-bubble loading-bubble">
+              <span className="loading-dots">
+                <span className="loading-dot" />
+                <span className="loading-dot" />
+                <span className="loading-dot" />
+              </span>
+            </div>
           </div>
         )}
         <div ref={messagesEndRef} />

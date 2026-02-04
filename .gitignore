@@ -42,3 +42,5 @@ Thumbs.db
 # Ignore Loom videos (large video files)
 backend/data/Loom instructional Vidoes/**
 *.mp4
+.vercel
+.env*.local
