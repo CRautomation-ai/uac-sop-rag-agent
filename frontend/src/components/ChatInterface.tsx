@@ -3,6 +3,8 @@ import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import logo from "../assets/logo.png";
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 interface Message {
@@ -84,7 +86,7 @@ const ChatInterface: React.FC = () => {
   return (
     <div className="app-container">
       <div className="header">
-        <h1>SOPRAG</h1>
+        <img src={logo} alt="SOP RAG" className="header-logo" />
       </div>
 
       {error && <div className="error-message">{error}</div>}

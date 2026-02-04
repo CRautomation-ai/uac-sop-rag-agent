@@ -10,7 +10,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #fff5f5;
   min-height: 100vh;
   padding: 20px;
 }
@@ -18,9 +18,9 @@ body {
 .app-container {
   max-width: 900px;
   margin: 0 auto;
-  background: white;
+  background: #fff;
   border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -28,10 +28,18 @@ body {
 }
 
 .header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: #fff;
+  color: #212529;
   padding: 24px;
   text-align: center;
+  border-bottom: 1px solid #ed222a;
+}
+
+.header-logo {
+  height: 40px;
+  width: auto;
+  display: inline-block;
+  object-fit: contain;
 }
 
 .header h1 {
@@ -122,14 +130,16 @@ body {
 }
 
 .message.user .message-bubble {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: #fff;
+  color: #212529;
+  border: 1px solid #e9ecef;
   border-bottom-right-radius: 4px;
 }
 
 .message.assistant .message-bubble {
-  background: #f1f3f5;
+  background: #fff;
   color: #212529;
+  border: 1px solid #e9ecef;
   border-bottom-left-radius: 4px;
 }
 
@@ -228,7 +238,7 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #667eea;
+  background: #adb5bd;
   animation: bounce 1.4s infinite ease-in-out both;
 }
 
@@ -261,7 +271,7 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #667eea;
+  background: #adb5bd;
   animation: loading-bounce 1.4s infinite ease-in-out both;
 }
 
@@ -297,8 +307,8 @@ body {
 
 .input-container {
   padding: 20px 24px;
-  background: #f8f9fa;
-  border-top: 1px solid #dee2e6;
+  background: #fff;
+  border-top: 1px solid #ed222a;
 }
 
 .input-form {
@@ -317,12 +327,12 @@ body {
 }
 
 .input-field:focus {
-  border-color: #667eea;
+  border-color: #dee2e6;
 }
 
 .send-button {
   padding: 12px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #ed222a;
   color: white;
   border: none;
   border-radius: 24px;
@@ -334,7 +344,7 @@ body {
 
 .send-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(237, 34, 42, 0.5);
 }
 
 .send-button:active:not(:disabled) {
