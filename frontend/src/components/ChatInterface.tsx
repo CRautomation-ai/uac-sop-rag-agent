@@ -130,7 +130,7 @@ const ChatInterface: React.FC = () => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question..."
+            placeholder="Ask Bolt..."
             className="input-field"
             disabled={loading}
           />
