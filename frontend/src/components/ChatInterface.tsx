@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // Backend base URL: /api when using Vite proxy (dev), or set VITE_API_URL for production (e.g. backend URL)
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
@@ -91,7 +93,15 @@ const ChatInterface: React.FC = () => {
       <div className="messages-container">
         {messages.map((msg, i) => (
           <div key={i} className={`message ${msg.role}`}>
-            <div className="message-bubble">{msg.content}</div>
+            <div className="message-bubble">
+              {msg.role === "assistant" ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {msg.content}
+                </ReactMarkdown>
+              ) : (
+                msg.content
+              )}
+            </div>
             {msg.sources && msg.sources.length > 0 && (
               <div className="message-sources">
                 Sources: {msg.sources.join(", ")}

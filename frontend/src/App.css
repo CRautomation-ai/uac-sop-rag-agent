@@ -133,6 +133,54 @@ body {
   border-bottom-left-radius: 4px;
 }
 
+/* Markdown inside assistant bubbles */
+.message-bubble p {
+  margin: 0 0 0.5em;
+}
+.message-bubble p:last-child {
+  margin-bottom: 0;
+}
+.message-bubble ul,
+.message-bubble ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+.message-bubble li {
+  margin: 0.25em 0;
+}
+.message-bubble code {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.message-bubble pre {
+  margin: 0.5em 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.message-bubble pre code {
+  background: none;
+  padding: 0;
+}
+.message-bubble strong {
+  font-weight: 600;
+}
+.message-bubble h1,
+.message-bubble h2,
+.message-bubble h3 {
+  margin: 0.75em 0 0.35em;
+  font-size: 1em;
+  font-weight: 600;
+}
+.message-bubble h1:first-child,
+.message-bubble h2:first-child,
+.message-bubble h3:first-child {
+  margin-top: 0;
+}
+
 .message-sources {
   margin-top: 8px;
   font-size: 12px;

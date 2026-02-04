@@ -80,15 +80,11 @@ def query_rag(user_query: str, top_k: int = 5) -> Dict[str, any]:
         
         # Step 4: Build prompt for OpenAI
         system_prompt = """You are a helpful assistant that answers questions based on the provided context from documents. 
-Use only the information from the context to answer the question. If the context doesn't contain enough information to answer the question, say so.
-IMPORTANT: Return your answer as plain text only. Do NOT use markdown formatting, code blocks, bold, italics, or any other formatting. Just plain text."""
+Use only the information from the context to answer the question. If the context doesn't contain enough information to answer the question, say so."""
         
-        user_prompt = f"""Context from documents:
-{context}
-
-Question: {user_query}
-
-Please provide a comprehensive answer based on the context above. Return your answer as plain text only, no markdown formatting."""
+        user_prompt = f"""Context from documents: {context}
+        Question: {user_query}
+"""
         
         # Step 5: Call OpenAI to generate answer
         logger.info("Generating answer with OpenAI...")
