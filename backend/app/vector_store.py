@@ -138,21 +138,3 @@ def search_similar_chunks(
     finally:
         cursor.close()
         conn.close()
-
-
-def clear_all_chunks():
-    """Clear all document chunks from the database."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute("DELETE FROM document_chunks;")
-        conn.commit()
-        logger.info("Cleared all document chunks from database")
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Error clearing chunks: {e}")
-        raise
-    finally:
-        cursor.close()
-        conn.close()
