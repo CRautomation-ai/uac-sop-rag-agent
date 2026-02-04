@@ -14,15 +14,6 @@ OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-l
 
 
 def get_embedding(text: str) -> List[float]:
-    """
-    Get embedding for text using OpenAI.
-    
-    Args:
-        text: Text to embed
-    
-    Returns:
-        Embedding vector as list of floats
-    """
     try:
         response = openai_client.embeddings.create(
             model=OPENAI_EMBEDDING_MODEL,
@@ -90,7 +81,6 @@ def query_rag(user_query: str, top_k: int = 5) -> Dict[str, any]:
         # Step 4: Build prompt for OpenAI
         system_prompt = """You are a helpful assistant that answers questions based on the provided context from documents. 
 Use only the information from the context to answer the question. If the context doesn't contain enough information to answer the question, say so.
-Cite your sources when providing information.
 IMPORTANT: Return your answer as plain text only. Do NOT use markdown formatting, code blocks, bold, italics, or any other formatting. Just plain text."""
         
         user_prompt = f"""Context from documents:
@@ -98,7 +88,7 @@ IMPORTANT: Return your answer as plain text only. Do NOT use markdown formatting
 
 Question: {user_query}
 
-Please provide a comprehensive answer based on the context above. If you reference specific information, mention the source. Return your answer as plain text only, no markdown formatting."""
+Please provide a comprehensive answer based on the context above. Return your answer as plain text only, no markdown formatting."""
         
         # Step 5: Call OpenAI to generate answer
         logger.info("Generating answer with OpenAI...")
