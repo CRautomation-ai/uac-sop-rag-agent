@@ -3,7 +3,7 @@ import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import logo from "../assets/logo.png";
+import logo from "../assets/logo.jpg";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 const SESSION_STORAGE_KEY = "chat_messages";
