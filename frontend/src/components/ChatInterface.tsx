@@ -7,6 +7,8 @@ import logo from "../assets/logo.jpg";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 const SESSION_STORAGE_KEY = "chat_messages";
+const WELCOME_TEXT =
+  "Hi I'm Bolt, I'm here to help you find SOPs, processes and answers for UAC. Let's go!";
 
 interface Message {
   role: "user" | "assistant";
@@ -44,10 +46,10 @@ const ChatInterface: React.FC = () => {
       const s = sessionStorage.getItem(SESSION_STORAGE_KEY);
       if (s) {
         const parsed = JSON.parse(s) as Message[];
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (_) {}
-    return [];
+    return [{ role: "assistant", content: WELCOME_TEXT }];
   });
   const [input, setInput] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -82,7 +84,7 @@ const ChatInterface: React.FC = () => {
           query: userMessage,
           top_k: 5,
           previous_messages: previousMessages,
-        }
+        },
       );
       setMessages((prev) => [
         ...prev,
@@ -120,24 +122,34 @@ const ChatInterface: React.FC = () => {
       {error && <div className="error-message">{error}</div>}
 
       <div className="messages-container">
-        {messages.map((msg, i) => (
-          <div key={i} className={`message ${msg.role}`}>
-            <div className="message-bubble">
-              {msg.role === "assistant" ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {msg.content}
-                </ReactMarkdown>
-              ) : (
-                msg.content
-              )}
-            </div>
-            {msg.sources && msg.sources.length > 0 && (
-              <div className="message-sources">
-                Sources: {msg.sources.join(", ")}
-              </div>
-            )}
+        {messages.length === 1 &&
+        messages[0].role === "assistant" &&
+        messages[0].content === WELCOME_TEXT ? (
+          <div className="welcome-center">
+            <p className="welcome-text">{WELCOME_TEXT}</p>
           </div>
-        ))}
+        ) : (
+          <>
+            {messages.map((msg, i) => (
+              <div key={i} className={`message ${msg.role}`}>
+                <div className="message-bubble">
+                  {msg.role === "assistant" ? (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.content}
+                    </ReactMarkdown>
+                  ) : (
+                    msg.content
+                  )}
+                </div>
+                {msg.sources && msg.sources.length > 0 && (
+                  <div className="message-sources">
+                    Sources: {msg.sources.join(", ")}
+                  </div>
+                )}
+              </div>
+            ))}
+          </>
+        )}
         {loading && (
           <div className="message assistant">
             <div className="message-bubble loading-bubble">

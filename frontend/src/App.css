@@ -96,6 +96,23 @@ body {
   gap: 16px;
 }
 
+.welcome-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.welcome-text {
+  margin: 0;
+  color: #fff;
+  font-size: 1.25rem;
+  line-height: 1.6;
+  text-align: center;
+  max-width: 480px;
+}
+
 .message {
   display: flex;
   flex-direction: column;
