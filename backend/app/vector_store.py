@@ -24,7 +24,6 @@ def store_embeddings(chunks: List[Dict[str, Any]], embeddings: List[List[float]]
     cursor = conn.cursor()
     
     try:
-        # Prepare data for batch insert
         values = []
         for chunk, embedding in zip(chunks, embeddings):
             # Convert embedding to PostgreSQL vector format
@@ -33,7 +32,6 @@ def store_embeddings(chunks: List[Dict[str, Any]], embeddings: List[List[float]]
             # Remove null bytes from text (PostgreSQL doesn't allow them)
             chunk_text = chunk['text'].replace('\x00', '').strip()
             
-            # Skip empty chunks
             if not chunk_text:
                 continue
             
@@ -114,7 +112,6 @@ def search_similar_chunks(
         
         chunks = []
         for row in results:
-            # PostgreSQL JSONB returns as dict, not string
             metadata = row[5] if row[5] else {}
             if isinstance(metadata, str):
                 metadata = json.loads(metadata)

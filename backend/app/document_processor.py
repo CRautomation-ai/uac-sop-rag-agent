@@ -168,7 +168,6 @@ def scan_and_process_documents(data_folder: str) -> tuple[List[Dict[str, Any]], 
         logger.error(f"Data folder does not exist: {data_folder}")
         return (all_chunks, 0)
     
-    # Supported file extensions
     supported_extensions = {'.pdf', '.docx', '.doc'}
     
     # Recursively find all PDF and Word documents

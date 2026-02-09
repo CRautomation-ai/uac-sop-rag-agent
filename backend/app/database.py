@@ -41,9 +41,6 @@ def initialize_database():
         """)
         
         # Create index for vector similarity search
-        # Using ivfflat index for efficient similarity search
-        # Note: lists parameter should be ~rows/1000 for optimal performance
-        # We'll use a default value that works for most cases
         try:
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS document_chunks_embedding_idx 
@@ -54,7 +51,6 @@ def initialize_database():
         except Exception as e:
             # If ivfflat fails (e.g., no data yet), create a simple index
             logger.warning(f"Could not create ivfflat index: {e}. Will create after data is loaded.")
-            # The index will be created automatically when data is inserted
         
         # Create index for source file lookups
         cursor.execute("""
@@ -84,7 +80,6 @@ def is_database_empty():
         return count == 0
     except Exception as e:
         logger.error(f"Error checking database: {e}")
-        # If table doesn't exist, consider it empty
         return True
     finally:
         cursor.close()

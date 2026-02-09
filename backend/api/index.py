@@ -11,8 +11,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.models import QueryRequest, QueryResponse, LoadDocumentsResponse, HealthResponse
 from app.database import initialize_database, is_database_empty, get_document_count
 from app.rag_chain import query_rag
-# document_processor, store_embeddings, get_embedding: lazy-imported in load_documents_internal
-# so serverless (Vercel) doesn't need PyPDF2/python-docx/tiktoken/langchain at import time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -23,13 +21,12 @@ app = FastAPI(title="SOP RAG Agent API")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize database on startup
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and check if documents need to be loaded."""
@@ -38,8 +35,6 @@ async def startup_event():
         logger.info("Database initialized")
         
         # Check if database is empty and auto-load documents if needed
-        # Note: For Vercel serverless, this runs on cold start
-        # For Docker, this runs once when container starts
         if is_database_empty():
             logger.info("Database is empty, auto-loading documents...")
             data_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
@@ -118,9 +113,6 @@ async def load_documents():
         
         if not os.path.exists(data_folder):
             raise HTTPException(status_code=404, detail=f"Data folder not found: {data_folder}")
-        
-        # Clear existing chunks (optional - remove if you want to append)
-        # clear_all_chunks()
         
         chunks_processed, files_processed = load_documents_internal(data_folder)
         
