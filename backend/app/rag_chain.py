@@ -39,6 +39,36 @@ def format_source_citation(chunk: Dict[str, any]) -> str:
     return " > ".join(parts)
 
 
+def rewrite_query_with_context(
+    current_query: str,
+    previous_messages: List[Dict[str, str]],
+) -> str:
+    """
+    Use previous Q&A and current query to produce a standalone, context-rich question
+    suitable for retrieval (embedding + search).
+    """
+    lines = []
+    for pm in previous_messages:
+        lines.append(f"Q: {pm.get('query', '')}\nA: {pm.get('answer', '')}")
+    conv = "\n\n".join(lines)
+    prompt = f"""Use the previous messages and the current user query to create a new, standalone user query that provides full context and is a complete question. The new query should be self-contained so that someone reading only it understands what is being asked. Output only the new query, nothing else.
+
+Previous messages:
+{conv}
+
+Current user query: {current_query}
+
+New standalone query:"""
+    response = openai_client.chat.completions.create(
+        model=OPENAI_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3,
+        max_tokens=200,
+    )
+    rewritten = (response.choices[0].message.content or "").strip()
+    return rewritten if rewritten else current_query
+
+
 def query_rag(
     user_query: str,
     top_k: int = 5,
@@ -56,10 +86,17 @@ def query_rag(
         Dictionary with answer and sources
     """
     try:
-        # Step 1: Embed the query
-        logger.info(f"Embedding query: {user_query[:50]}...")
-        query_embedding = get_embedding(user_query)
-        
+        # Step 0 (optional): Rewrite query with conversation context for better retrieval
+        search_query = user_query
+        if previous_messages:
+            logger.info("Rewriting query with conversation context...")
+            search_query = rewrite_query_with_context(user_query, previous_messages)
+            logger.info(f"Rewritten query: {search_query[:80]}...")
+
+        # Step 1: Embed the (rewritten) query
+        logger.info(f"Embedding query: {search_query[:50]}...")
+        query_embedding = get_embedding(search_query)
+
         # Step 2: Search for similar chunks
         logger.info(f"Searching for similar chunks (top_k={top_k})...")
         similar_chunks = search_similar_chunks(query_embedding, top_k=top_k)
@@ -82,28 +119,16 @@ def query_rag(
         
         context = "\n\n---\n\n".join(context_parts)
 
-        # Step 4: Build prompt for OpenAI (with optional previous messages)
+        # Step 4: Build prompt for OpenAI (use search_query so answer matches intent)
         system_prompt = """You are a helpful assistant named Bolt that answers questions based on the provided context from documents. 
 Use only the information from the context to answer the question. If the context doesn't contain enough information to answer the question, say so."""
 
-        previous_context = ""
-        if previous_messages:
-            lines = []
-            for pm in previous_messages:
-                lines.append(f"Q: {pm.get('query', '')}\nA: {pm.get('answer', '')}")
-            previous_context = (
-                "\n\nHere are the previous messages in this conversation:\n"
-                + "\n\n".join(lines)
-                + "\n\nSince these are the last few questions and answers, only use the ones that are relevant to the current question. "
-                "Answer the current question below using the document context above (and relevant prior context if needed).\n\n"
-            )
+        user_prompt = f"""Context from documents:
 
-        user_prompt = f"""Context from documents: {context}
+{context}
+
+Question: {search_query}
 """
-
-        if previous_context:
-            user_prompt += f"\n{previous_context}"
-        user_prompt += f"Current question: {user_query}"
         
         # Step 5: Call OpenAI to generate answer
         logger.info("Generating answer with OpenAI...")
