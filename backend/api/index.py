@@ -138,7 +138,10 @@ async def load_documents():
 async def query(request: QueryRequest):
     """Query the RAG system."""
     try:
-        result = query_rag(request.query, top_k=request.top_k)
+        prev = None
+        if request.previous_messages:
+            prev = [{"query": m.query, "answer": m.answer} for m in request.previous_messages]
+        result = query_rag(request.query, top_k=request.top_k, previous_messages=prev)
         return QueryResponse(
             answer=result['answer'],
             sources=result['sources']

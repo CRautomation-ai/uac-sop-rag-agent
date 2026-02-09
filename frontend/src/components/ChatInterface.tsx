@@ -6,11 +6,22 @@ import remarkGfm from "remark-gfm";
 import logo from "../assets/logo.png";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const SESSION_STORAGE_KEY = "chat_messages";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   sources?: string[];
+}
+
+function getLast3Pairs(msgs: Message[]): { query: string; answer: string }[] {
+  const pairs: { query: string; answer: string }[] = [];
+  for (let i = 0; i < msgs.length - 1; i += 1) {
+    if (msgs[i].role === "user" && msgs[i + 1].role === "assistant") {
+      pairs.push({ query: msgs[i].content, answer: msgs[i + 1].content });
+    }
+  }
+  return pairs.slice(-3);
 }
 
 interface QueryResponse {
@@ -28,7 +39,16 @@ interface QueryError {
 }
 
 const ChatInterface: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const s = sessionStorage.getItem(SESSION_STORAGE_KEY);
+      if (s) {
+        const parsed = JSON.parse(s) as Message[];
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (_) {}
+    return [];
+  });
   const [input, setInput] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +58,12 @@ const ChatInterface: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(messages));
+    } catch (_) {}
+  }, [messages]);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
@@ -45,6 +71,7 @@ const ChatInterface: React.FC = () => {
     const userMessage = input.trim();
     setInput("");
     setError(null);
+    const previousMessages = getLast3Pairs(messages);
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
     setLoading(true);
 
@@ -54,6 +81,7 @@ const ChatInterface: React.FC = () => {
         {
           query: userMessage,
           top_k: 5,
+          previous_messages: previousMessages,
         }
       );
       setMessages((prev) => [

@@ -2,9 +2,15 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 
+class PreviousMessage(BaseModel):
+    query: str
+    answer: str
+
+
 class QueryRequest(BaseModel):
     query: str
     top_k: int = 5
+    previous_messages: Optional[List[PreviousMessage]] = None
 
 
 class QueryResponse(BaseModel):
