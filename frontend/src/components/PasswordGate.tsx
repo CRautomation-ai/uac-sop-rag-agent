@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { API_BASE_URL, AUTH_TOKEN_KEY } from "../constants/chat";
+import Spinner from "./Spinner";
 
 interface PasswordGateProps {
   onSuccess: () => void;
@@ -52,7 +53,7 @@ export const PasswordGate: React.FC<PasswordGateProps> = ({ onSuccess }) => {
             disabled={loading || !password.trim()}
             className="send-button"
           >
-            {loading ? "..." : "Continue"}
+            {loading ? <Spinner /> : "Continue"}
           </button>
         </form>
         {error && <div className="error-message">{error}</div>}
