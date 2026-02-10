@@ -2,15 +2,16 @@ import os
 import sys
 import logging
 import asyncio
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 # Add backend directory to path so "from app.*" resolves to backend/app
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app.models import QueryRequest, QueryResponse, LoadDocumentsResponse, HealthResponse
+from app.models import AuthRequest, AuthResponse, QueryRequest, QueryResponse, LoadDocumentsResponse, HealthResponse
 from app.database import initialize_database, is_database_empty, get_document_count
 from app.rag_chain import query_rag
+from app.auth import verify_password, create_token, get_current_token
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -105,6 +106,16 @@ async def health_check():
     )
 
 
+@app.post("/api/auth", response_model=AuthResponse)
+@app.post("/auth", response_model=AuthResponse)
+async def auth(request: AuthRequest):
+    """Verify password and return JWT. Used by both /api/auth and /auth for local proxy."""
+    print('hi')
+    if not verify_password(request.password):
+        raise HTTPException(status_code=401, detail="Invalid password")
+    return AuthResponse(token=create_token())
+
+
 @app.post("/api/load-documents", response_model=LoadDocumentsResponse)
 async def load_documents():
     """Load documents from the data folder into the vector database."""
@@ -126,18 +137,33 @@ async def load_documents():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def _handle_query(request: QueryRequest):
+    """Shared query logic for /api/query and /query."""
+    prev = None
+    if request.previous_messages:
+        prev = [{"query": m.query, "answer": m.answer} for m in request.previous_messages]
+    result = query_rag(request.query, top_k=request.top_k, previous_messages=prev)
+    return QueryResponse(
+        answer=result['answer'],
+        sources=result['sources']
+    )
+
+
 @app.post("/api/query", response_model=QueryResponse)
-async def query(request: QueryRequest):
-    """Query the RAG system."""
+async def query(request: QueryRequest, _: str = Depends(get_current_token)):
+    """Query the RAG system (protected)."""
     try:
-        prev = None
-        if request.previous_messages:
-            prev = [{"query": m.query, "answer": m.answer} for m in request.previous_messages]
-        result = query_rag(request.query, top_k=request.top_k, previous_messages=prev)
-        return QueryResponse(
-            answer=result['answer'],
-            sources=result['sources']
-        )
+        return _handle_query(request)
+    except Exception as e:
+        logger.error(f"Error processing query: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/query", response_model=QueryResponse)
+async def query_local(request: QueryRequest, _: str = Depends(get_current_token)):
+    """Query endpoint for local dev when proxy strips /api prefix."""
+    try:
+        return _handle_query(request)
     except Exception as e:
         logger.error(f"Error processing query: {e}")
         raise HTTPException(status_code=500, detail=str(e))

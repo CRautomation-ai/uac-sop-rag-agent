@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import type { Message, QueryResponse, QueryError } from "../types/chat";
-import { API_BASE_URL, SESSION_STORAGE_KEY, WELCOME_TEXT } from "../constants/chat";
+import { API_BASE_URL, AUTH_TOKEN_KEY, SESSION_STORAGE_KEY, WELCOME_TEXT } from "../constants/chat";
 import { getLast3Pairs } from "../utils/chat";
 
 function parseError(err: unknown): string {
@@ -26,7 +26,7 @@ function loadMessagesFromStorage(): Message[] {
   return [{ role: "assistant", content: WELCOME_TEXT }];
 }
 
-export function useChat() {
+export function useChat(onUnauthorized?: () => void) {
   const [messages, setMessages] = useState<Message[]>(loadMessagesFromStorage);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -55,11 +55,18 @@ export function useChat() {
     setLoading(true);
 
     try {
-      const { data } = await axios.post<QueryResponse>(`${API_BASE_URL}/query`, {
-        query: userMessage,
-        top_k: 5,
-        previous_messages: previousMessages,
-      });
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const { data } = await axios.post<QueryResponse>(
+        `${API_BASE_URL}/query`,
+        {
+          query: userMessage,
+          top_k: 5,
+          previous_messages: previousMessages,
+        },
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
       setMessages((prev) => [
         ...prev,
         {
@@ -69,6 +76,11 @@ export function useChat() {
         },
       ]);
     } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401 && onUnauthorized) {
+        onUnauthorized();
+        return;
+      }
       const msg = parseError(err);
       setError(msg);
       setMessages((prev) => [

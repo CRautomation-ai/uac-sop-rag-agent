@@ -28,3 +28,11 @@ class HealthResponse(BaseModel):
     status: str
     database_connected: bool
     documents_loaded: bool
+
+
+class AuthRequest(BaseModel):
+    password: str
+
+
+class AuthResponse(BaseModel):
+    token: str

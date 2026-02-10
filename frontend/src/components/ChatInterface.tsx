@@ -7,7 +7,12 @@ import { WelcomeView } from "./WelcomeView";
 import { ChatInput } from "./ChatInput";
 import { LoadingDots } from "./LoadingDots";
 
-const ChatInterface: React.FC = () => {
+interface ChatInterfaceProps {
+  onUnauthorized?: () => void;
+  onLogout?: () => void;
+}
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onUnauthorized, onLogout }) => {
   const {
     messages,
     input,
@@ -16,7 +21,7 @@ const ChatInterface: React.FC = () => {
     error,
     messagesEndRef,
     handleSubmit,
-  } = useChat();
+  } = useChat(onUnauthorized);
 
   const isWelcomeOnly =
     messages.length === 1 &&
@@ -27,6 +32,11 @@ const ChatInterface: React.FC = () => {
     <div className="app-container">
       <div className="header">
         <img src={logo} alt="SOP RAG" className="header-logo" />
+        {onLogout && (
+          <button type="button" className="logout-button" onClick={onLogout}>
+            Log out
+          </button>
+        )}
       </div>
 
       {error && <div className="error-message">{error}</div>}
