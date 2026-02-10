@@ -1,117 +1,27 @@
-import React, { useState, useRef, useEffect } from "react";
-import axios from "axios";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-
+import React from "react";
 import logo from "../assets/logo.jpg";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
-const SESSION_STORAGE_KEY = "chat_messages";
-const WELCOME_TEXT =
-  "Hi I'm Bolt, I'm here to help you find SOPs, processes and answers for UAC. Let's go!";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-  sources?: string[];
-}
-
-function getLast3Pairs(msgs: Message[]): { query: string; answer: string }[] {
-  const pairs: { query: string; answer: string }[] = [];
-  for (let i = 0; i < msgs.length - 1; i += 1) {
-    if (msgs[i].role === "user" && msgs[i + 1].role === "assistant") {
-      pairs.push({ query: msgs[i].content, answer: msgs[i + 1].content });
-    }
-  }
-  return pairs.slice(-3);
-}
-
-interface QueryResponse {
-  answer?: string;
-  sources?: string[];
-}
-
-interface QueryError {
-  response?: {
-    data?: {
-      detail?: string | Array<{ msg?: string }>;
-    };
-  };
-  message?: string;
-}
+import { WELCOME_TEXT } from "../constants/chat";
+import { useChat } from "../hooks/useChat";
+import { MessageBubble } from "./MessageBubble";
+import { WelcomeView } from "./WelcomeView";
+import { ChatInput } from "./ChatInput";
+import { LoadingDots } from "./LoadingDots";
 
 const ChatInterface: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>(() => {
-    try {
-      const s = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (s) {
-        const parsed = JSON.parse(s) as Message[];
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (_) {}
-    return [{ role: "assistant", content: WELCOME_TEXT }];
-  });
-  const [input, setInput] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const {
+    messages,
+    input,
+    setInput,
+    loading,
+    error,
+    messagesEndRef,
+    handleSubmit,
+  } = useChat();
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(messages));
-    } catch (_) {}
-  }, [messages]);
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!input.trim() || loading) return;
-
-    const userMessage = input.trim();
-    setInput("");
-    setError(null);
-    const previousMessages = getLast3Pairs(messages);
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
-    setLoading(true);
-
-    try {
-      const { data } = await axios.post<QueryResponse>(
-        `${API_BASE_URL}/query`,
-        {
-          query: userMessage,
-          top_k: 5,
-          previous_messages: previousMessages,
-        },
-      );
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: data.answer ?? "",
-          sources: Array.isArray(data.sources) ? data.sources : [],
-        },
-      ]);
-    } catch (err) {
-      const error = err as QueryError;
-      const raw =
-        error.response?.data?.detail ?? error.message ?? "An error occurred";
-      const msg = Array.isArray(raw)
-        ? raw
-            .map((e) => (typeof e === "string" ? e : e.msg || String(e)))
-            .join(" ")
-        : String(raw);
-      setError(msg);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: `Error: ${msg}` },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const isWelcomeOnly =
+    messages.length === 1 &&
+    messages[0].role === "assistant" &&
+    messages[0].content === WELCOME_TEXT;
 
   return (
     <div className="app-container">
@@ -122,67 +32,25 @@ const ChatInterface: React.FC = () => {
       {error && <div className="error-message">{error}</div>}
 
       <div className="messages-container">
-        {messages.length === 1 &&
-        messages[0].role === "assistant" &&
-        messages[0].content === WELCOME_TEXT ? (
-          <div className="welcome-center">
-            <p className="welcome-text">{WELCOME_TEXT}</p>
-          </div>
+        {isWelcomeOnly ? (
+          <WelcomeView />
         ) : (
           <>
             {messages.map((msg, i) => (
-              <div key={i} className={`message ${msg.role}`}>
-                <div className="message-bubble">
-                  {msg.role === "assistant" ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {msg.content}
-                    </ReactMarkdown>
-                  ) : (
-                    msg.content
-                  )}
-                </div>
-                {msg.sources && msg.sources.length > 0 && (
-                  <div className="message-sources">
-                    Sources: {msg.sources.join(", ")}
-                  </div>
-                )}
-              </div>
+              <MessageBubble key={i} message={msg} />
             ))}
           </>
         )}
-        {loading && (
-          <div className="message assistant">
-            <div className="message-bubble loading-bubble">
-              <span className="loading-dots">
-                <span className="loading-dot" />
-                <span className="loading-dot" />
-                <span className="loading-dot" />
-              </span>
-            </div>
-          </div>
-        )}
+        {loading && <LoadingDots />}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="input-container">
-        <form onSubmit={handleSubmit} className="input-form">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask Bolt..."
-            className="input-field"
-            disabled={loading}
-          />
-          <button
-            type="submit"
-            disabled={loading || !input.trim()}
-            className="send-button"
-          >
-            Send
-          </button>
-        </form>
-      </div>
+      <ChatInput
+        value={input}
+        onChange={setInput}
+        onSubmit={handleSubmit}
+        loading={loading}
+      />
     </div>
   );
 };
