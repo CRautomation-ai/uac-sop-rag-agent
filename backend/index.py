@@ -5,8 +5,8 @@ import asyncio
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-# Add parent directory to path to import app modules
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add backend directory to path so "from app.*" resolves to backend/app
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.models import QueryRequest, QueryResponse, LoadDocumentsResponse, HealthResponse
 from app.database import initialize_database, is_database_empty, get_document_count
@@ -33,11 +33,11 @@ async def startup_event():
     try:
         initialize_database()
         logger.info("Database initialized")
-        
+
         # Check if database is empty and auto-load documents if needed
         if is_database_empty():
             logger.info("Database is empty, auto-loading documents...")
-            data_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+            data_folder = os.path.join(os.path.dirname(__file__), "data")
             if os.path.exists(data_folder):
                 # Run loading in background to avoid blocking startup
                 asyncio.create_task(load_documents_async(data_folder))
@@ -95,9 +95,9 @@ async def health_check():
     except Exception as e:
         logger.error(f"Database connection error: {e}")
         database_connected = False
-    
+
     documents_loaded = not is_database_empty()
-    
+
     return HealthResponse(
         status="healthy" if database_connected else "unhealthy",
         database_connected=database_connected,
@@ -109,13 +109,13 @@ async def health_check():
 async def load_documents():
     """Load documents from the data folder into the vector database."""
     try:
-        data_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
-        
+        data_folder = os.path.join(os.path.dirname(__file__), "data")
+
         if not os.path.exists(data_folder):
             raise HTTPException(status_code=404, detail=f"Data folder not found: {data_folder}")
-        
+
         chunks_processed, files_processed = load_documents_internal(data_folder)
-        
+
         return LoadDocumentsResponse(
             message="Documents loaded successfully",
             chunks_processed=chunks_processed,

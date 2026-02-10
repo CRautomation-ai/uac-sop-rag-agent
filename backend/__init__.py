@@ -1,1 +1,1 @@
-# Backend package (so "from backend.api.index import app" works from repo root).
+# Backend package (so "from backend.index import app" works from repo root).
