@@ -90,6 +90,12 @@ body {
   cursor: not-allowed;
 }
 
+.upload-limit-warning {
+  margin-top: 10px;
+  font-size: 11px;
+  color: #f5b6b9;
+}
+
 .hidden-file-input {
   display: none;
 }

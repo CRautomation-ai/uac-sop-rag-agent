@@ -27,6 +27,8 @@ from app.auth import verify_password, create_token, get_current_token
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+MAX_TOTAL_UPLOAD_BYTES = int(os.getenv("MAX_TOTAL_UPLOAD_MB", "4")) * 1024 * 1024
+MAX_FILE_UPLOAD_BYTES = int(os.getenv("MAX_FILE_UPLOAD_MB", "4")) * 1024 * 1024
 
 app = FastAPI(title="SOP RAG Agent API")
 
@@ -48,8 +50,14 @@ async def startup_event():
 
         # Check if database is empty and auto-load documents if needed
         if is_database_empty():
-            logger.info("Database is empty, auto-loading documents...")
             data_folder = os.path.join(os.path.dirname(__file__), "data")
+            is_vercel_runtime = os.getenv("VERCEL") == "1"
+
+            if is_vercel_runtime and not os.path.exists(data_folder):
+                logger.info("Skipping startup auto-load on Vercel: bundled data folder is not available")
+                return
+
+            logger.info("Database is empty, auto-loading documents...")
             if os.path.exists(data_folder):
                 # Run loading in background to avoid blocking startup
                 asyncio.create_task(load_documents_async(data_folder))
@@ -176,6 +184,7 @@ async def upload_documents(
     skipped_files: List[str] = []
     failed_files: List[str] = []
     file_entries: List[dict] = []
+    total_upload_size = 0
 
     try:
         with tempfile.TemporaryDirectory(prefix="sop_rag_upload_") as temp_dir:
@@ -194,12 +203,26 @@ async def upload_documents(
 
                 try:
                     content = await upload.read()
+                    file_size = len(content)
+                    if file_size > MAX_FILE_UPLOAD_BYTES:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"File '{normalized}' exceeds the {MAX_FILE_UPLOAD_BYTES // (1024 * 1024)} MB per-file limit"
+                        )
                     destination.write_bytes(content)
                     file_entries.append({
                         "path": str(destination),
                         "relative_path": normalized
                     })
+                    total_upload_size += file_size
+                    if total_upload_size > MAX_TOTAL_UPLOAD_BYTES:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"Upload exceeds the {MAX_TOTAL_UPLOAD_BYTES // (1024 * 1024)} MB total limit"
+                        )
                 except Exception as exc:
+                    if isinstance(exc, HTTPException):
+                        raise
                     logger.error("Error saving uploaded file %s: %s", normalized, exc)
                     failed_files.append(normalized)
 

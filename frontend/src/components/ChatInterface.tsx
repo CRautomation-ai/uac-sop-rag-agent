@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
 import logo from "../assets/logo.jpg";
-import { WELCOME_TEXT } from "../constants/chat";
+import { MAX_FILE_UPLOAD_MB, MAX_TOTAL_UPLOAD_MB, WELCOME_TEXT } from "../constants/chat";
 import { useChat } from "../hooks/useChat";
 import { MessageBubble } from "./MessageBubble";
 import { WelcomeView } from "./WelcomeView";
@@ -54,6 +54,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onUnauthorized, onLogout 
           >
             {uploadLoading ? "Uploading..." : "Upload Folder"}
           </button>
+        </div>
+        <div className="upload-limit-warning">
+          Max upload: {MAX_TOTAL_UPLOAD_MB} MB per upload, {MAX_FILE_UPLOAD_MB} MB per file.
         </div>
         {onLogout && (
           <button type="button" className="logout-button" onClick={onLogout}>

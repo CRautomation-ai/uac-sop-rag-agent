@@ -4,6 +4,18 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import logging
 
 logger = logging.getLogger(__name__)
+IVFFLAT_MAX_DIMENSIONS = 2000
+
+
+def get_embedding_dimensions() -> int:
+    """Get embedding dimension from env, defaulting to text-embedding-3-large size."""
+    raw = os.getenv("EMBEDDING_DIM", "3072")
+    try:
+        value = int(raw)
+    except ValueError:
+        logger.warning("Invalid EMBEDDING_DIM '%s'; defaulting to 3072", raw)
+        value = 3072
+    return value
 
 
 def get_db_connection():
@@ -19,6 +31,7 @@ def initialize_database():
     conn = get_db_connection()
     conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     cursor = conn.cursor()
+    embedding_dimensions = get_embedding_dimensions()
     
     try:
         # Enable pgvector extension
@@ -30,7 +43,7 @@ def initialize_database():
             CREATE TABLE IF NOT EXISTS document_chunks (
                 id SERIAL PRIMARY KEY,
                 chunk_text TEXT NOT NULL,
-                embedding vector(3072),
+                embedding vector(%s),
                 source_file TEXT NOT NULL,
                 folder_path TEXT,
                 page_number INTEGER,
@@ -38,19 +51,25 @@ def initialize_database():
                 metadata JSONB,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-        """)
+        """, (embedding_dimensions,))
         
         # Create index for vector similarity search
-        try:
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS document_chunks_embedding_idx 
-                ON document_chunks 
-                USING ivfflat (embedding vector_cosine_ops)
-                WITH (lists = 100);
-            """)
-        except Exception as e:
-            # If ivfflat fails (e.g., no data yet), create a simple index
-            logger.warning(f"Could not create ivfflat index: {e}. Will create after data is loaded.")
+        if embedding_dimensions <= IVFFLAT_MAX_DIMENSIONS:
+            try:
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS document_chunks_embedding_idx
+                    ON document_chunks
+                    USING ivfflat (embedding vector_cosine_ops)
+                    WITH (lists = 100);
+                """)
+            except Exception as e:
+                logger.warning(f"Could not create ivfflat index: {e}")
+        else:
+            logger.info(
+                "Skipping ivfflat index: embedding dim %s exceeds supported max %s",
+                embedding_dimensions,
+                IVFFLAT_MAX_DIMENSIONS
+            )
         
         # Create index for source file lookups
         cursor.execute("""

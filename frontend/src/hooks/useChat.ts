@@ -6,7 +6,14 @@ import type {
   QueryError,
   UploadDocumentsResponse,
 } from "../types/chat";
-import { API_BASE_URL, AUTH_TOKEN_KEY, SESSION_STORAGE_KEY, WELCOME_TEXT } from "../constants/chat";
+import {
+  API_BASE_URL,
+  AUTH_TOKEN_KEY,
+  SESSION_STORAGE_KEY,
+  WELCOME_TEXT,
+  MAX_FILE_UPLOAD_MB,
+  MAX_TOTAL_UPLOAD_MB,
+} from "../constants/chat";
 import { getLast3Pairs } from "../utils/chat";
 
 function parseError(err: unknown): string {
@@ -103,6 +110,24 @@ export function useChat(onUnauthorized?: () => void) {
     if (!files.length || uploadLoading) return;
 
     setUploadStatus(null);
+    const maxFileBytes = MAX_FILE_UPLOAD_MB * 1024 * 1024;
+    const maxTotalBytes = MAX_TOTAL_UPLOAD_MB * 1024 * 1024;
+    const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+
+    const oversizedFile = files.find((file) => file.size > maxFileBytes);
+    if (oversizedFile) {
+      const message = `Folder is too large. ${oversizedFile.name} exceeds the ${MAX_FILE_UPLOAD_MB} MB per-file limit.`;
+      window.alert(message);
+      setUploadStatus(message);
+      return;
+    }
+    if (totalBytes > maxTotalBytes) {
+      const message = `Folder is too large. Max upload per request is ${MAX_TOTAL_UPLOAD_MB} MB.`;
+      window.alert(message);
+      setUploadStatus(message);
+      return;
+    }
+
     const formData = new FormData();
     for (const file of files) {
       const relativePath =
@@ -135,6 +160,12 @@ export function useChat(onUnauthorized?: () => void) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 401 && onUnauthorized) {
         onUnauthorized();
+        return;
+      }
+      if (status === 413) {
+        const message = `Folder is too large. Max upload per request is ${MAX_TOTAL_UPLOAD_MB} MB.`;
+        window.alert(message);
+        setUploadStatus(message);
         return;
       }
       setUploadStatus(`Upload failed: ${parseError(err)}`);
