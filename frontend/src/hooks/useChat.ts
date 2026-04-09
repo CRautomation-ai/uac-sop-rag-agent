@@ -148,7 +148,6 @@ export function useChat(onUnauthorized?: () => void) {
 
       const status = [
         `${data.files_processed}/${data.files_received} files processed`,
-        `${data.chunks_processed} chunks indexed`,
         data.skipped_files.length ? `${data.skipped_files.length} skipped` : "",
         data.failed_files.length ? `${data.failed_files.length} failed` : "",
       ]

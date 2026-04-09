@@ -37,26 +37,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onUnauthorized, onLogout 
     <div className="app-container">
       <div className="header">
         <img src={logo} alt="SOP RAG" className="header-logo" />
-        <div className="header-actions">
-          <button
-            type="button"
-            className="header-button"
-            disabled={uploadLoading}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {uploadLoading ? "Uploading..." : "Upload Files"}
-          </button>
-          <button
-            type="button"
-            className="header-button"
-            disabled={uploadLoading}
-            onClick={() => folderInputRef.current?.click()}
-          >
-            {uploadLoading ? "Uploading..." : "Upload Folder"}
-          </button>
-        </div>
-        <div className="upload-limit-warning">
-          Max upload: {MAX_TOTAL_UPLOAD_MB} MB per upload, {MAX_FILE_UPLOAD_MB} MB per file.
+        <div className="upload-controls">
+          <div className="header-actions">
+            <button
+              type="button"
+              className="header-button"
+              disabled={uploadLoading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploadLoading ? "Uploading..." : "Upload Files"}
+            </button>
+            <button
+              type="button"
+              className="header-button"
+              disabled={uploadLoading}
+              onClick={() => folderInputRef.current?.click()}
+            >
+              {uploadLoading ? "Uploading..." : "Upload Folder"}
+            </button>
+          </div>
+          <div className="upload-limit-warning">
+            Max upload: {MAX_TOTAL_UPLOAD_MB} MB per upload, {MAX_FILE_UPLOAD_MB} MB per file.
+          </div>
         </div>
         {onLogout && (
           <button type="button" className="logout-button" onClick={onLogout}>

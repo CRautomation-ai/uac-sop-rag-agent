@@ -62,11 +62,18 @@ body {
   object-fit: contain;
 }
 
-.header-actions {
+.upload-controls {
   position: absolute;
   top: 50%;
   left: 24px;
   transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.header-actions {
   display: flex;
   gap: 8px;
 }
@@ -91,9 +98,12 @@ body {
 }
 
 .upload-limit-warning {
-  margin-top: 10px;
   font-size: 11px;
-  color: #f5b6b9;
+  color: #ffdca6;
+  background: rgba(255, 220, 166, 0.12);
+  border: 1px solid rgba(255, 220, 166, 0.35);
+  border-radius: 6px;
+  padding: 3px 8px;
 }
 
 .hidden-file-input {
