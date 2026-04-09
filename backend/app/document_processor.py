@@ -5,7 +5,6 @@ from typing import List, Dict, Any, Optional
 import PyPDF2
 from docx import Document
 import tiktoken
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 logger = logging.getLogger(__name__)
 SUPPORTED_EXTENSIONS = {'.pdf', '.docx', '.doc'}
@@ -76,15 +75,30 @@ def chunk_text_by_tokens(
     Returns:
         List of text chunks
     """
-    # Use RecursiveCharacterTextSplitter which respects paragraph/sentence boundaries
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size,
-        chunk_overlap=chunk_overlap,
-        length_function=count_tokens,
-        separators=["\n\n", "\n", ". ", " ", ""]  # Try to split at paragraphs, then sentences
-    )
-    
-    chunks = text_splitter.split_text(text)
+    clean_text = text.strip()
+    if not clean_text:
+        return []
+
+    if chunk_overlap >= chunk_size:
+        chunk_overlap = max(0, chunk_size // 5)
+
+    tokens = encoding.encode(clean_text)
+    if not tokens:
+        return []
+
+    chunks: List[str] = []
+    start = 0
+    step = max(1, chunk_size - chunk_overlap)
+
+    while start < len(tokens):
+        token_slice = tokens[start:start + chunk_size]
+        chunk = encoding.decode(token_slice).strip()
+        if chunk:
+            chunks.append(chunk)
+        if start + chunk_size >= len(tokens):
+            break
+        start += step
+
     return chunks
 
 
