@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import logo from "../assets/logo.jpg";
 import { WELCOME_TEXT } from "../constants/chat";
 import { useChat } from "../hooks/useChat";
@@ -19,9 +19,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onUnauthorized, onLogout 
     setInput,
     loading,
     error,
+    uploadLoading,
+    uploadStatus,
     messagesEndRef,
     handleSubmit,
+    uploadDocuments,
   } = useChat(onUnauthorized);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const isWelcomeOnly =
     messages.length === 1 &&
@@ -32,14 +37,61 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onUnauthorized, onLogout 
     <div className="app-container">
       <div className="header">
         <img src={logo} alt="SOP RAG" className="header-logo" />
+        <div className="header-actions">
+          <button
+            type="button"
+            className="header-button"
+            disabled={uploadLoading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploadLoading ? "Uploading..." : "Upload Files"}
+          </button>
+          <button
+            type="button"
+            className="header-button"
+            disabled={uploadLoading}
+            onClick={() => folderInputRef.current?.click()}
+          >
+            {uploadLoading ? "Uploading..." : "Upload Folder"}
+          </button>
+        </div>
         {onLogout && (
           <button type="button" className="logout-button" onClick={onLogout}>
             Log out
           </button>
         )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.doc,.docx"
+          multiple
+          className="hidden-file-input"
+          onChange={(e) => {
+            const selected = Array.from(e.target.files || []);
+            void uploadDocuments(selected);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={folderInputRef}
+          type="file"
+          accept=".pdf,.doc,.docx"
+          multiple
+          className="hidden-file-input"
+          {...({
+            webkitdirectory: "",
+            directory: "",
+          } as React.InputHTMLAttributes<HTMLInputElement>)}
+          onChange={(e) => {
+            const selected = Array.from(e.target.files || []);
+            void uploadDocuments(selected);
+            e.target.value = "";
+          }}
+        />
       </div>
 
       {error && <div className="error-message">{error}</div>}
+      {uploadStatus && <div className="upload-status">{uploadStatus}</div>}
 
       <div className="messages-container">
         {isWelcomeOnly ? (

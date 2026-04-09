@@ -1,6 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
-import type { Message, QueryResponse, QueryError } from "../types/chat";
+import type {
+  Message,
+  QueryResponse,
+  QueryError,
+  UploadDocumentsResponse,
+} from "../types/chat";
 import { API_BASE_URL, AUTH_TOKEN_KEY, SESSION_STORAGE_KEY, WELCOME_TEXT } from "../constants/chat";
 import { getLast3Pairs } from "../utils/chat";
 
@@ -31,6 +36,8 @@ export function useChat(onUnauthorized?: () => void) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -92,13 +99,60 @@ export function useChat(onUnauthorized?: () => void) {
     }
   };
 
+  const uploadDocuments = async (files: File[]) => {
+    if (!files.length || uploadLoading) return;
+
+    setUploadStatus(null);
+    const formData = new FormData();
+    for (const file of files) {
+      const relativePath =
+        ((file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name).replace(/\\/g, "/");
+      formData.append("files", file, relativePath);
+    }
+
+    setUploadLoading(true);
+    try {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const { data } = await axios.post<UploadDocumentsResponse>(
+        `${API_BASE_URL}/upload-documents`,
+        formData,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
+
+      const status = [
+        `${data.files_processed}/${data.files_received} files processed`,
+        `${data.chunks_processed} chunks indexed`,
+        data.skipped_files.length ? `${data.skipped_files.length} skipped` : "",
+        data.failed_files.length ? `${data.failed_files.length} failed` : "",
+      ]
+        .filter(Boolean)
+        .join(" | ");
+
+      setUploadStatus(status);
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401 && onUnauthorized) {
+        onUnauthorized();
+        return;
+      }
+      setUploadStatus(`Upload failed: ${parseError(err)}`);
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
   return {
     messages,
     input,
     setInput,
     loading,
     error,
+    uploadLoading,
+    uploadStatus,
     messagesEndRef,
     handleSubmit,
+    uploadDocuments,
   };
 }

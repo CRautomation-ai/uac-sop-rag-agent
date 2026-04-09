@@ -24,6 +24,15 @@ class LoadDocumentsResponse(BaseModel):
     files_processed: int
 
 
+class UploadDocumentsResponse(BaseModel):
+    message: str
+    files_received: int
+    files_processed: int
+    chunks_processed: int
+    skipped_files: List[str]
+    failed_files: List[str]
+
+
 class HealthResponse(BaseModel):
     status: str
     database_connected: bool

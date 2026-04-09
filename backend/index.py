@@ -2,13 +2,24 @@ import os
 import sys
 import logging
 import asyncio
-from fastapi import Depends, FastAPI, HTTPException
+import tempfile
+from pathlib import Path
+from typing import List
+from fastapi import Depends, FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
 # Add backend directory to path so "from app.*" resolves to backend/app
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app.models import AuthRequest, AuthResponse, QueryRequest, QueryResponse, LoadDocumentsResponse, HealthResponse
+from app.models import (
+    AuthRequest,
+    AuthResponse,
+    QueryRequest,
+    QueryResponse,
+    LoadDocumentsResponse,
+    UploadDocumentsResponse,
+    HealthResponse,
+)
 from app.database import initialize_database, is_database_empty, get_document_count
 from app.rag_chain import query_rag
 from app.auth import verify_password, create_token, get_current_token
@@ -63,26 +74,34 @@ async def load_documents_async(data_folder: str):
 def load_documents_internal(data_folder: str) -> tuple[int, int]:
     """Internal function to load documents. Returns (chunks_processed, files_processed)."""
     from app.document_processor import scan_and_process_documents
-    from app.rag_chain import get_embedding
-    from app.vector_store import store_embeddings
-
     all_chunks, files_processed = scan_and_process_documents(data_folder)
 
     if not all_chunks:
         return 0, files_processed
+
+    chunks_processed = process_chunks_and_store(all_chunks)
+    return chunks_processed, files_processed
+
+
+def process_chunks_and_store(all_chunks: List[dict]) -> int:
+    """Shared embedding + storage pipeline for preprocessed chunks."""
+    if not all_chunks:
+        return 0
+
+    from app.rag_chain import get_embedding
+    from app.vector_store import store_embeddings
 
     logger.info(f"Getting embeddings for {len(all_chunks)} chunks...")
     embeddings = []
     for i, chunk in enumerate(all_chunks):
         if (i + 1) % 10 == 0:
             logger.info(f"Embedding progress: {i + 1}/{len(all_chunks)}")
-        embedding = get_embedding(chunk['text'])
+        embedding = get_embedding(chunk["text"])
         embeddings.append(embedding)
 
     logger.info("Storing embeddings in database...")
     store_embeddings(all_chunks, embeddings)
-
-    return len(all_chunks), files_processed
+    return len(all_chunks)
 
 
 @app.get("/api/health", response_model=HealthResponse)
@@ -110,7 +129,6 @@ async def health_check():
 @app.post("/auth", response_model=AuthResponse)
 async def auth(request: AuthRequest):
     """Verify password and return JWT. Used by both /api/auth and /auth for local proxy."""
-    print('hi')
     if not verify_password(request.password):
         raise HTTPException(status_code=401, detail="Invalid password")
     return AuthResponse(token=create_token())
@@ -134,6 +152,75 @@ async def load_documents():
         )
     except Exception as e:
         logger.error(f"Error loading documents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _normalize_upload_path(upload_name: str) -> str:
+    """Normalize browser-provided upload path to a safe relative form."""
+    clean = upload_name.replace("\\", "/").strip("/")
+    return clean or "uploaded_file"
+
+
+@app.post("/api/upload-documents", response_model=UploadDocumentsResponse)
+@app.post("/upload-documents", response_model=UploadDocumentsResponse)
+async def upload_documents(
+    files: List[UploadFile] = File(...),
+    _: str = Depends(get_current_token)
+):
+    """Upload one or more files, then process/embed/store into vector DB."""
+    from app.document_processor import scan_and_process_file_paths, SUPPORTED_EXTENSIONS
+
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded")
+
+    skipped_files: List[str] = []
+    failed_files: List[str] = []
+    file_entries: List[dict] = []
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="sop_rag_upload_") as temp_dir:
+            temp_root = Path(temp_dir)
+
+            for upload in files:
+                normalized = _normalize_upload_path(upload.filename or "")
+                ext = Path(normalized).suffix.lower()
+
+                if ext not in SUPPORTED_EXTENSIONS:
+                    skipped_files.append(normalized)
+                    continue
+
+                destination = temp_root / normalized
+                destination.parent.mkdir(parents=True, exist_ok=True)
+
+                try:
+                    content = await upload.read()
+                    destination.write_bytes(content)
+                    file_entries.append({
+                        "path": str(destination),
+                        "relative_path": normalized
+                    })
+                except Exception as exc:
+                    logger.error("Error saving uploaded file %s: %s", normalized, exc)
+                    failed_files.append(normalized)
+
+            all_chunks, files_processed = scan_and_process_file_paths(
+                file_entries=file_entries,
+                base_path=str(temp_root)
+            )
+            chunks_processed = process_chunks_and_store(all_chunks)
+
+            return UploadDocumentsResponse(
+                message="Documents uploaded and processed successfully",
+                files_received=len(files),
+                files_processed=files_processed,
+                chunks_processed=chunks_processed,
+                skipped_files=skipped_files,
+                failed_files=failed_files
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error uploading documents: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
